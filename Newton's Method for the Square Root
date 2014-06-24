@@ -1,0 +1,110 @@
+Lev Golod, 703 880 628
+-----------
+Homework 1, Due 10.22.2013
+-----------
+Stat 102A, Fall 13
+-----------
+Professor De Leeuw 
+-----------
+
+# Assignment: Approximating the square root of a number using the Newton Method
+
+### Function Code
+
+The function CalcSqrt will approximate the square root of a number, X, using the
+Newton Method.
+
+This means starting at an arbitrary guess which we will call y0 (y-nought). We
+iteratively approach the square root by updating Y according to the formula:
+
+Y(t + 1) = ( Y(t) + X/Y(t) )/2 , where Y(t) is our current guess for the square
+root of X
+
+At each step, we calculate the difference between our current guess and our
+previous guess. We stop when this difference is below a certain threshold
+Epsilon (at which point we consider the function to have converged) or when we
+reach the maximum number of iterations, itMax.
+
+
+```{r tidy = FALSE}
+CalcSqrt <- function(x, y0, eps = 1e-6, itMax = 100, verbose = TRUE){
+  # Approximates the square root of a number through the Newton method,
+    # using successive iterations.
+  #   
+  # Args:
+    # x: The number whose square root the caller wishes to find.        
+    # y0: The caller's first guess for what the square root is.                    
+    # eps: When the difference between two numbers is smaller than this value,
+      # the numbers are considered to be equal. Defaul value = 1e-6.                 
+    # itMax: The maximum number of iterations of the function.
+      # Default value = 100.            
+    # verbose: When TRUE, prints the value of each successive guess.
+      # Default value = TRUE.  
+  #
+  # Returns: 
+  # The final estimate of the square root.
+  #
+  # Error handling:
+if (x < 0){
+    stop("Dude, you can't take the square root of negative numbers!")
+  }
+if (eps <= 0){
+    stop("Please choose a positive epsilon value.")
+  }
+if (itMax <= 0){
+    stop("Please choose a positive maximum number of iterations.")
+  }
+  myAbsDiff <- Inf # myAbsDiff is the absolute value of the difference between
+# the current guess and the previous guess. 
+  yOld <- y0 #yOld is what we will call the current guess
+  v <- 1 # v counts the number of iterations
+  while ( (myAbsDiff > eps) & ( v <= (itMax)) ){ # the function continues to 
+    # iterate so long as the difference between the current guess and the 
+    # previous one is greater than Epsilon, the convergence threshold AND so 
+    # long as we haven't yet reached the maximum number of iterations.
+    if (verbose){ # if verbose is TRUE, the function prints the current guess
+      # at each step
+      print(yOld)
+    }
+    v <- v + 1 # update v to count the number of iterations
+    yNew <- (yOld + (x/yOld))/2 # update the guess for the square root according
+    # to the above formula
+    myAbsDiff <- abs(yNew - yOld) # find the difference between the new guess and
+    # the old one
+    yOld <- yNew # the new guess becomes the current guess
+  }
+  print(paste("The approximation of the square root is",
+    format(yNew, digits = 7))) # return the final Y value as the best approximation
+# of the square root
+}
+```
+
+### Example
+Below we see an example of the function in action: approximating the square root
+of 709,674 starting with the user's guess of 2.
+
+```{r}
+CalcSqrt(709674, 2) 
+```
+
+
+We see that the value returned by the function is 842.4. We can see if this is the right answer by comparing this output to the output from R's built-in square-root function:
+
+```{r}
+sqrt(709674)
+```
+
+We see that R's built-in function also returned the value 842.4. This shows that the function I wrote approximates the square root correctly.
+
+### More examples
+
+Let's approximate the square root of a few more numbers
+
+```{r}
+CalcSqrt(225, 3, verbose = F)
+sqrt(225)
+CalcSqrt(10000, 2)
+sqrt(10000)
+CalcSqrt(4567, 5, verbose = F)
+sqrt(4567)
+```
