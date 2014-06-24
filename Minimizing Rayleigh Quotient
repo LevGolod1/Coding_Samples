@@ -5,6 +5,8 @@ Lev Golod, 702880628
 Stats 102A, Professor De Leeuw
 ====================
 
+# NB: This is an R Markdown file, extension .RMD
+
 ### The assignment is to write an R function that uses cyclic coordinate descent to minimize the Rayleigh quotient, $λ(x) = x′Ax / x′Bx$ , over x. Here A and B are positive semidefinite matrices.
 
 **Preliminary Tasks**
