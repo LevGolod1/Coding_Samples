@@ -1,0 +1,117 @@
+#### Homework 2, due 11.05.2013
+
+#### Lev Golod 703880628
+
+#### Stats 102A, Professor De Leeuw
+
+
+# NB: This is an R Markdown file, extension .RMD
+
+## Assignment: Write functions to find the skewness and kurtosis of distributions, *without using loops*
+
+Skewness and Kurtosis are both measures of the shape of a distribition. Skewness
+refers to assymetry, while Kurtosis refers to peakedness 
+
+First we must load the package VGAM. 
+This is needed to generate Laplace distributions.
+One should ensure that this package has been installed on one's computer. 
+```{r echo = FALSE, message = FALSE, cache = FALSE, results = FALSE, warning = FALSE, comment = FALSE}
+options (cache = FALSE, results = FALSE, warning = FALSE, comment = FALSE)
+# installing and loading necessary packages.
+install.packages("VGAM")
+library(VGAM)
+install.packages("e1071")
+library(e1071)
+```
+
+### Find.m0, a function to find the moments about zero.
+
+In order to calculate Skewness and Kurtosis, we need to find the moments of a
+distribution
+```{r tidy = FALSE}
+Find.m0 <- function(x, y){
+  # Finds the moments about 0 of a vector of numbers
+  # 
+  # Args:
+    # x: The vector of numbers whose moments we wish to find.
+    # y: The function will compute the first y moments of x.
+  #
+  # Returns: A vector with the 1st through yth moments about zero of x.
+  orders <- matrix(data = c(1:y), nrow = y, ncol = 1) # A matrix containing 
+  # all the different values for the order of the moments. 
+  Moment <- m <- function(i){ # A function that finds the moment of order "i". 
+    sum(( x - 0 )^i)/(length(x))
+    }
+  M <- moments.matrix <- apply(orders, 1:2, m) # Finds the moments
+  # of orders 1 through y, by applying function "Moment" to the "orders" matrix.
+  L <- moments.vector <- as.vector(M) # Puts all the moments into a vector.
+  return(L) # Returns the vector with all the moments.
+  }
+```
+
+### Find.m, a function to find the central moments (moments about the mean)
+
+```{r tidy = FALSE}
+Find.m <- function(x, y){
+  # Finds the central moments of a vector of numbers.
+  # 
+  # Args:
+    # x: The vector of numbers whose moments we wish to find.
+    # y: The function will compute the first y moments of x.
+  #
+  # Returns: A vector with the 1st through yth central moments of x.
+  orders <- matrix(data = c(1:y), nrow = y, ncol = 1) # A matrix containing 
+  # all the different values for the order of the moments. 
+  avg <- Find.m0(x, 1)[1] # Uses the function "Find.m0",
+  # to find the mean of the elements of x, aka the 1st order moment about zero.
+  Moment <- m <- function(i){ # A function that finds the ith moment. 
+    sum(( x - avg )^i)/(length(x))
+    }
+  M <- moments.matrix <- apply(orders, 1:2, m) # Finds the moments 
+  # of orders 1 through y, by applying function "Moment" to the "orders" matrix.
+  L <- moments.vector <- as.vector(M) # Puts all the moments into a vector.
+  return(L) # Returns the vector with all the moments.
+  }
+```
+
+### Find.S.K, a function to find skewness and kurtosis
+```{r tidy = FALSE}
+Find.S.K <- F1 <- function(x){
+  # Finds the skewness and kurtosis of a vector of numbers.
+  # 
+  # Args:
+    # x: The vector of numbers whos skewness and kurtosis we wish to find.
+  #
+  # Returns: A list with the skewness and kurtosis of x.
+  moments.vector <- mu <- Find.m(x, 4) # Uses the function "Find.m" to get
+  # the first 4 central moments of x.
+  skew <- gamma1 <- mu[3] / ((mu[2]) ^ 1.5) # Computes skewness
+  # according to the given formula, using the moment values found above.
+  kurtosis <- gamma2 <- (mu[4] / (mu[2] ^ 2) ) - 3 # Computes kurtosis,
+  # according to the given formula, using the moment values found above.
+  results <- list(skew, kurtosis) # Puts skewness and kurtosis into a list.
+  return(results) # Returns the list with the skewness and kurtosis values.
+  }
+```
+
+### d1 through d4, vectors of data from different distributions to use as examples
+```{r}
+set.seed(101010)
+d1 <- (rnorm(1000))
+d2 <- (rcauchy(1000))
+d3 <- (rlaplace(1000))
+d4 <- (rchisq(1000, df = 2))
+# Vectors of 1000 randomly generated numers, based on four distributions:
+# Normal, Cauchy, Laplace, and Chi-Squared.
+```
+
+### Table of Skewness and Kurtosis values
+
+Finally, we get to the good part. In this table, I use the function Find.S.K to compute the skewness and kurtosis of each of the four example vectors, d1 through d4. Skewness and Kurtosis are two different measures of the shape of a distribution. 
+
+Distribution    |  Skewness        | Kurtosis  
+----------------|------------------|--------------
+Normal          | `r F1(d1)[1]`   | `r F1(d1)[2]`
+Cauchy          | `r F1(d2)[1]`   | `r F1(d2)[2]`
+LaPlace         | `r F1(d3)[1]`   | `r F1(d3)[2]`
+Chi-Squared     | `r F1(d4)[1]`   | `r F1(d4)[2]`
