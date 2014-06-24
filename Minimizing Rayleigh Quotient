@@ -1,0 +1,169 @@
+HW 5, Due 12.17.2013
+================
+Lev Golod, 702880628
+===================
+Stats 102A, Professor De Leeuw
+====================
+
+### The assignment is to write an R function that uses cyclic coordinate descent to minimize the Rayleigh quotient, $λ(x) = x′Ax / x′Bx$ , over x. Here A and B are positive semidefinite matrices.
+
+**Preliminary Tasks**
+
+  First I will need a function to calculate the Rayleigh quotient. Given a vector x and two conformable, positive semi-definite matrices A and B, this function returns the Rayleigh quotient Lambda(x), as defined by the equation above. 
+
+```{r}
+Find.rq <- function(x, A, B){
+  rq <- ((t(x) %*% A) %*% x) / ((t(x) %*% B) %*% x)
+  return(rq)
+}
+```
+
+**Rayleigh Quotient Minimization Function**
+
+  This function will use cyclical coordinate descent to minimize Lambda. The arguments are A and B, the two matrices, eps (epsilon), the convergence cut-off value, itmax, the maximum number of iterations, and verbose, a logical flag that determines whether to print each iteration. The Rayleigh quotient formula also calls for a vector, x. We do not know the best x, but rather arrive at the best x gradually, starting from an arbitrary guess. 
+  
+  Cyclical coordinate descent means that we are changing x gradually so as to reduce lambda. Within each cycle, we change the jth element of x by adding the jth element of theta. We calculate theta by differentiating $λ(x + θej)$ and find the values of $θ$ for which the derivative is zero. This means solving the following quadratic equation: 
+  
+  $(x′Ax + 2θuj + θ2ajj )(vj + θbjj ) − (x′Bx + 2θvj + θ2bjj )(uj + θajj ) = 0$ 
+  
+  The equation yields two real $θ$ values, and we choose the one that minimizes $λ$. Now we have the theta value needed to update the jth element of x. After updating each element of x, we calculate the new theta, and continue updating x. This continues until either the function converges or we hit the maximum number of iterations. Convergence is determined when the largest element of theta within a cycle is smaller than epsilon; this means that x is basically not changing anymore, and that Lambda is minimized because it cannot be reduced any further. The function returns the final Lambda value.
+
+```{r tidy = FALSE}
+Min.rq  <- function(A, B, eps = 1e-6, itmax = 100, verbose = FALSE) {
+  # Uses cyclical coordinate descent to minimize the Rayleigh quotient, Lambda.
+  #
+  # Args:
+  #
+  #  A: a positive semi-definite matrix
+  #  B: a positive semi-definite matrix
+  #    A and B must be conformable. In this case, that means they must have 
+  #    the same number of rows and columns.
+  #  eps: epsilon, the cut-off value used to check convergence. If the 
+  #    difference between two numbers is smaller than eps, the two
+  #    numbers are considered to be equal. Default value = 1e-6
+  #  itmax: the maximum number of iterations. Default value = 100
+  #  verbose: when TRUE, the function prints the maximum theta for each cycle.
+  #    Default value = TRUE
+  #
+  #  Returns: The minimum Lambda value
+  n <- nrow(A) # number of rows of either matrix (since they must have the same 
+  #   number of rows and columns)
+  m <- ncol(A) # number of columns of either matrix
+  x <- rep (1, n) # The initial guess is set to a vector, length n,
+  # with each element equal to one.
+  itel <- 1 # itel is used to count the number of iterations. Initial value
+  # set to 1.
+  th <- 0 # Theta is the change in each element of x. Initial value set to 0
+  u <- A %*% x # u is matrix A times vector x.
+  v <- B %*% x # v is matrix B times vector x.
+  r <- (t(x) %*% A) %*% x # r is x transpose times A times x
+  s <- (t(x) %*% B) %*% x # s is stands for x transpose times B times x
+  repeat { # Each cycle of this loop updates each element of x in order to
+    # minimize Lambda. The loop stops once max.theta (the largest change in x)
+    # is smaller than epsilon, i.e. when x has converged, and Lambda cannot get
+    # any smaller. It also stops after the maximum allowed number of iterations.
+    for (j in 1:m) { # This loop represents one cycle of cyclical coordinate
+      # descent. It updates each element of x and also updates max.theta. 
+      # To find the theta that minimizes Lambda, it is necessary to
+      # solve a quadratic equation, based on the given formula. A1, B1, and C1
+      # represent the coefficients of theta^2, theta^1, and theta^0, respectively.
+      A1 <- as.numeric(((u[j] * B[j, j])) - ((v[j] * A[j, j])))
+      B1 <- as.numeric((r * B[j, j]) - (s * A[j, j]))
+      C1 <- as.numeric((r * v[j]) - (s * u[j]))
+      # Error handling
+      # 
+      # Checks to make sure the determinant of the quadratic is non-negative.
+      # Otherwise, we will have non-real solutions for theta and cannot 
+      # proceed
+      if ( ((B1)^2 - 4*A1*C1) < 0) stop ("If the determinant of the quadratic 
+                                         equation is negative, then we have a 
+                                         problem.")
+      # Based on the quadratic formula, we get two solutions for theta. 
+      root1 <- (-B1 + sqrt((B1)^2 - 4*A1*C1)) / (2 * A1)
+      root2 <- (-B1 - sqrt((B1)^2 - 4*A1*C1)) / (2 * A1)
+      # We must figure out which of the two roots minimizes Lambda.
+      x1 <- x # Calculate lambda for the 1st root, using the Find.rq function
+      x1[j] <- x1[j] + root1
+      L1 <- Find.rq(x1, A, B)
+      x2 <- x # Calculate lambda for the 2nd root, using the Find.rq function
+      x2[j] <- x2[j] + root2
+      L2 <- Find.rq(x2, A, B)
+      # We compare the two Lambda values. Whichever root minimizes Lambda
+      # becomes the jth element of theta for this cycle. 
+      if (as.numeric(L1) < as.numeric(L2)) th[j] <- root1
+      else th[j] <- root2
+      x[j] <- x[j] + th[[j]] # Updates the jth element of x by adding the 
+      # jth element of theta. 
+      th.max <- max(abs (th)) # theta.max is the largest (in absolute terms)
+      # theta value from this cycle.
+      # Now we must update u, v, r, and s
+      r <- r + (2 * th[j] * u[j]) + (A[j, j] * th[j] * th[j])
+      s <- s + (2 * th[j] * v[j]) + (B[j, j] * th[j] * th[j])
+      u <- u + th[j] * A[ ,j]
+      v <- v + th[j] * B[, j]
+      lambda <- Find.rq(x, A, B)
+    }
+    if (verbose) { # if verbose is TRUE, the function prints the theta.max for 
+      # each iteration. 
+      print(paste("For iteration", itel, "the max theta is", 
+                  round(th.max, digits = 7), "and the best Lambda is",
+                  round(lambda, digits = 7)))
+    }
+    if ((th.max < eps) || (itel == itmax)) break() # The loop breaks if either
+    # theta.max falls below epsilon or the maximum number of iterations has
+    # been reached
+    itel <- itel + 1 # After each cycle of the loop, the iteration counter 
+    # increases by one.
+  }
+  if (itel < itmax) print(paste("The function has converged after", itel,
+                                "iteration(s)."))
+  # Once the loop has finished, prints itel so the caller can see
+  # whether the function converged and how quickly.
+  best.lambda <- Find.rq(x, A, B) # finds the Lambda value corresponding to
+  # the final x vector.
+  return(best.lambda) # returns the final Lambda value 
+}
+```
+
+**Examples**
+
+Now I will construct some appropriate sample matrices to demonstrate the function.
+
+```{r tidy = FALSE}
+set.seed (12345)
+A <- crossprod (matrix (rnorm (40), 10 ,4)) / 10
+B <- crossprod (matrix (rnorm (40), 10 ,4)) / 10
+C <- crossprod (matrix (rnorm (40), 10 ,4)) / 10
+D <- crossprod (matrix (rnorm (40), 10 ,4)) / 10
+E <- crossprod (matrix (rnorm (48), 12 ,4)) / 12
+G <- crossprod (matrix (rnorm (48), 12 ,4)) / 12
+Min.rq(A, B, verbose = T)
+Min.rq(C, D)
+Min.rq(E, G, verbose = T)
+Min.rq(A, C)
+Min.rq(C, B, verbose = T)
+```
+
+**Further Demonstration**
+
+To further demonstrate that the function works, I will show that when A is a positive semi-definite matrix, and when B is the identity matrix, the function I wrote to minimize the Lambda value defined  $λ(x) = x′Ax / x′Bx$ will actually converge to the smallest eigenvalue of matrix A.
+
+```{r}
+I <- diag(c(1, 1, 1, 1)) # I is the identity matrix. 
+```
+
+Matrix A
+
+```{r}
+Min.rq(A, I)
+min(eigen(A)$values)
+```
+
+Matrix C
+
+```{r}
+Min.rq(C, I)
+min(eigen(C)$values)
+```
+
+We see that the minimized Lambda for matrix A and the identity matrix is identical to the smallest eigenvalue of matrix A. The same holds for matrix C. This demonstrates that the function is working correctly. 
